@@ -277,6 +277,7 @@ class ConnectionPool(object):
                  prefill=True,
                  socket_factory=default_socket_factory,
                  transport_factory=default_transport_factory,
+                 listeners=[PoolLogger()],
                  **kwargs):
         """
         All connections in the pool will be opened to `keyspace`.
@@ -357,10 +358,7 @@ class ConnectionPool(object):
         self._on_pool_dispose = []
         self._on_pool_max = []
 
-        self.add_listener(PoolLogger())
-
-        if "listeners" in kwargs:
-            listeners = kwargs["listeners"]
+        if listeners:
             for l in listeners:
                 self.add_listener(l)
 
