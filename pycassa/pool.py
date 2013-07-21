@@ -18,6 +18,10 @@ from connection import (Connection, default_socket_factory,
 from logging.pool_logger import PoolLogger
 from util import as_interface
 from cassandra.ttypes import TimedOutException, UnavailableException
+import logging
+import inspect
+
+log = logging.getLogger('PYCASSADEBUGGER')
 
 _BASE_BACKOFF = 0.01
 
@@ -503,6 +507,11 @@ class ConnectionPool(object):
     def _decrement_overflow(self):
         self._pool_lock.acquire()
         self._current_conns -= 1
+        caller_frame = inspect.stack()[1]
+        try:
+            log.info('current_conns decremented to {0} - CI {1} - FROM {2}.{3}.{4}'.format(self._current_conns, self.checkedin(), caller_frame[1], caller_frame[3], caller_frame[2]))
+        finally:
+            del caller_frame
         self._pool_lock.release()
 
     def _new_if_required(self, max_conns, check_empty_queue=False):
