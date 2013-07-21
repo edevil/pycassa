@@ -131,7 +131,7 @@ class ConnectionWrapper(Connection):
                 return result
             except Thrift.TApplicationException, app_exc:
                 self.close()
-                self._pool._decrement_overflow()
+                self._pool._decrement_overflow(self)
                 self._pool._clear_current()
                 raise app_exc
             except (TimedOutException, UnavailableException,
@@ -140,7 +140,7 @@ class ConnectionWrapper(Connection):
                 self._pool._notify_on_failure(exc, server=self.server, connection=self)
 
                 self.close()
-                self._pool._decrement_overflow()
+                self._pool._decrement_overflow(self)
                 self._pool._clear_current()
 
                 self._retry_count += 1
@@ -501,15 +501,15 @@ class ConnectionPool(object):
                 self._q.put_nowait(conn)
             except Queue.Full:
                 conn._dispose_wrapper(reason="pool is already full")
-                self._decrement_overflow()
+                self._decrement_overflow(conn)
     return_conn = put
 
-    def _decrement_overflow(self):
+    def _decrement_overflow(self, conn):
         self._pool_lock.acquire()
         self._current_conns -= 1
         caller_frame = inspect.stack()[1]
         try:
-            log.info('current_conns decremented to {0} - CI {1} - FROM {2}.{3}.{4}'.format(self._current_conns, self.checkedin(), caller_frame[1], caller_frame[3], caller_frame[2]))
+            log.info('current_conns decremented to {0} - CI {1} - FROM {2}.{3}.{4} - C {5}'.format(self._current_conns, self.checkedin(), caller_frame[1], caller_frame[3], caller_frame[2], id(conn)))
         finally:
             del caller_frame
         self._pool_lock.release()
