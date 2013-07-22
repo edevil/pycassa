@@ -349,6 +349,8 @@ class ConnectionPool(object):
         self._pool_lock = threading.Lock()
         self._current_conns = 0
 
+        self._prob = False
+
         # Listener groups
         self.listeners = []
         self._on_connect = []
@@ -512,6 +514,13 @@ class ConnectionPool(object):
             log.info('current_conns decremented to {0} - CI {1} - FROM {2}.{3}.{4} - C {5}'.format(self._current_conns, self.checkedin(), caller_frame[1], caller_frame[3], caller_frame[2], id(conn)))
         finally:
             del caller_frame
+
+        if self._current_conns < self._q.qsize() and not self._prob:
+            self._prob = True
+            log.error('Houston, we have a problem.')
+            for c in list(self._q.queue):
+                log.debug('CONN {0}'.format(id(c)))
+
         self._pool_lock.release()
 
     def _new_if_required(self, max_conns, check_empty_queue=False):
