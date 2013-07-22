@@ -511,7 +511,7 @@ class ConnectionPool(object):
         self._current_conns -= 1
         caller_frame = inspect.stack()[1]
         try:
-            log.info('current_conns decremented to {0} - CI {1} - FROM {2}.{3}.{4} - C {5}'.format(self._current_conns, self.checkedin(), caller_frame[1], caller_frame[3], caller_frame[2], id(conn)))
+            log.info('current_conns decremented to {0} - CI {1} - FROM {2}.{3}.{4} - C {5}.{6}'.format(self._current_conns, self.checkedin(), caller_frame[1], caller_frame[3], caller_frame[2], id(conn), id(conn.transport)))
         finally:
             del caller_frame
 
@@ -519,7 +519,7 @@ class ConnectionPool(object):
             self._prob = True
             log.error('Houston, we have a problem.')
             for c in list(self._q.queue):
-                log.debug('CONN {0}'.format(id(c)))
+                log.debug('CONN {0}.{1}'.format(id(c), id(c.transport)))
 
         self._pool_lock.release()
 
@@ -542,6 +542,7 @@ class ConnectionPool(object):
                 try:
                     self._pool_lock.acquire()
                     self._current_conns -= 1
+                    log.info('current_conns decremented to {0} - CI {1}'.format(self._current_conns, self.checkedin()))
                     raise
                 finally:
                     self._pool_lock.release()
@@ -601,6 +602,8 @@ class ConnectionPool(object):
         finally:
             if conn and conn.transport.isOpen():
                 self.put(conn)
+            elif conn:
+                log.info('Connection was not put in queue due to closed transport - C {0}.{1}'.format(id(conn), id(conn.transport)))
 
     def dispose(self):
         """ Closes all checked in connections in the pool. """
