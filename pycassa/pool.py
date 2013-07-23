@@ -106,6 +106,8 @@ class ConnectionWrapper(Connection):
         with its contents.
 
         """
+        log.info('Will replace C {0}.{1} with C {2}.{3}'.format(id(self), id(self.transport), id(new_conn_wrapper), id(new_conn_wrapper.transport)))
+
         self.server = new_conn_wrapper.server
         self.transport = new_conn_wrapper.transport
         self._iprot = new_conn_wrapper._iprot
