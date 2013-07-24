@@ -98,6 +98,7 @@ class ConnectionWrapper(Connection):
         self._state = ConnectionWrapper._DISPOSED
 
         self.close()
+        self.was_closed = True
         self._pool._notify_on_dispose(self, msg=reason)
 
     def _replace(self, new_conn_wrapper):
@@ -110,6 +111,8 @@ class ConnectionWrapper(Connection):
 
         self.server = new_conn_wrapper.server
         self.transport = new_conn_wrapper.transport
+        self.was_closed = False
+
         self._iprot = new_conn_wrapper._iprot
         self._oprot = new_conn_wrapper._oprot
         self.info = new_conn_wrapper.info
@@ -133,6 +136,7 @@ class ConnectionWrapper(Connection):
                 return result
             except Thrift.TApplicationException, app_exc:
                 self.close()
+                self.was_closed = True
                 self._pool._decrement_overflow(self)
                 self._pool._clear_current()
                 raise app_exc
@@ -142,6 +146,7 @@ class ConnectionWrapper(Connection):
                 self._pool._notify_on_failure(exc, server=self.server, connection=self)
 
                 self.close()
+                self.was_closed = True
                 self._pool._decrement_overflow(self)
                 self._pool._clear_current()
 
@@ -610,6 +615,9 @@ class ConnectionPool(object):
             return getattr(conn, f)(*args, **kwargs)
         finally:
             if conn and conn.transport.isOpen():
+                if hasattr(conn, 'was_closed') and conn.was_closed:
+                    log.info('Would put conn in queue even though it should be closed - C {0}.{1}'.format(id(conn), id(conn.transport)))
+
                 self.put(conn)
             elif conn:
                 log.info('Connection was not put in queue due to closed transport - C {0}.{1}'.format(id(conn), id(conn.transport)))
