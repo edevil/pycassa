@@ -522,11 +522,13 @@ class ConnectionPool(object):
         finally:
             del caller_frame
 
+        if not self._prob:
+            for c in list(self._q.queue):
+                log.debug('CONN {0}.{1}'.format(id(c), id(c.transport)))
+
         if self._current_conns < self._q.qsize() and not self._prob:
             self._prob = True
             log.error('Houston, we have a problem.')
-            for c in list(self._q.queue):
-                log.debug('CONN {0}.{1}'.format(id(c), id(c.transport)))
 
         self._pool_lock.release()
 
